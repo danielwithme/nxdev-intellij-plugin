@@ -1,6 +1,6 @@
 package vn.com.ntq.nxdev.toolWindow
 
-import vn.com.ntq.nxdev.actions.AskNxDevAction
+import vn.com.ntq.nxdev.actions.PromptAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
@@ -77,9 +77,9 @@ class NxDevWindowFactory : ToolWindowFactory {
                 conn.setRequestProperty("Authorization", authorizationKey)
                 conn.doOutput = true
 
-                val jsonRequest = AskNxDevAction.JsonRequest(
+                val jsonRequest = PromptAction.JsonRequest(
                         model = "ntq-coder",
-                        messages = listOf(AskNxDevAction.Message("user", message)),
+                        messages = listOf(PromptAction.Message("user", message)),
                         max_tokens = 4096
                 )
 

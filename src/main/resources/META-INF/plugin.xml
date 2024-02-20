@@ -23,9 +23,9 @@
         <group id="NxDevActionGroup" text="NxDev" description="My custom action group" popup="true">
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
         </group>
-<!--        <action class="com.github.danielwithme.copilotinteliijplatformplugin.actions.AskNxDevAction" text="Ask NxDev">-->
-<!--            <add-to-group group-id="NxDevActionGroup"/>-->
-<!--        </action>-->
+        <action class="vn.com.ntq.nxdev.actions.AskNxDevAction" text="Ask NxDev">
+            <add-to-group group-id="NxDevActionGroup"/>
+        </action>
         <action class="vn.com.ntq.nxdev.actions.ExplainCodeAction" text="NxDev: Explain Selection">
             <add-to-group group-id="NxDevActionGroup"/>
         </action>
