@@ -1,0 +1,49 @@
+<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <id>vn.com.ntq.nxdev</id>
+    <name>NxDev</name>
+    <vendor>danielwithme</vendor>
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <resource-bundle>messages.MyBundle</resource-bundle>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow factoryClass="vn.com.ntq.nxdev.toolWindow.NxDevWindowFactory" id="NxDev" anchor="right" />
+        <applicationConfigurable instance="vn.com.ntq.nxdev.settings.MyPluginSettingsConfigurable" displayName="NxDev Setting"/>
+        <applicationService
+                serviceImplementation="vn.com.ntq.nxdev.settings.MyPluginSettings"/>
+    </extensions>
+
+    <applicationListeners>
+        <listener class="vn.com.ntq.nxdev.listeners.MyApplicationActivationListener" topic="com.intellij.openapi.application.ApplicationActivationListener"/>
+    </applicationListeners>
+
+    <actions>
+        <group id="NxDevActionGroup" text="NxDev" description="My custom action group" popup="true">
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+        </group>
+<!--        <action class="com.github.danielwithme.copilotinteliijplatformplugin.actions.AskNxDevAction" text="Ask NxDev">-->
+<!--            <add-to-group group-id="NxDevActionGroup"/>-->
+<!--        </action>-->
+        <action class="vn.com.ntq.nxdev.actions.ExplainCodeAction" text="NxDev: Explain Selection">
+            <add-to-group group-id="NxDevActionGroup"/>
+        </action>
+        <action class="vn.com.ntq.nxdev.actions.FindProblemsAction" text="NxDev: Find Problems">
+            <add-to-group group-id="NxDevActionGroup"/>
+        </action>
+        <action class="vn.com.ntq.nxdev.actions.GenerateUnitTestAction" text="NxDev: Generate Unit Test">
+            <add-to-group group-id="NxDevActionGroup"/>
+        </action>
+        <action class="vn.com.ntq.nxdev.actions.OptimizeCodeAction" text="NxDev: Optimize Selection">
+            <add-to-group group-id="NxDevActionGroup"/>
+        </action>
+        <action class="vn.com.ntq.nxdev.actions.RefactorCodeAction" text="NxDev: Refactor Selection">
+            <add-to-group group-id="NxDevActionGroup"/>
+        </action>
+        <action class="vn.com.ntq.nxdev.actions.WriteDocumentationAction" text="NxDev: Write Documentation">
+            <add-to-group group-id="NxDevActionGroup"/>
+        </action>
+    </actions>
+
+</idea-plugin>
