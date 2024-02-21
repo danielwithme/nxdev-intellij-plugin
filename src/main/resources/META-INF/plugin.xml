@@ -3,6 +3,17 @@
     <id>vn.com.ntq.nxdev</id>
     <name>NxDev</name>
     <vendor>danielwithme</vendor>
+    <description><![CDATA[
+        Provide NxDev chat support for developer, the support include:
+        <ul>
+            <li>Ask general questions or use code snippets from the editor to query NxDev via an input box in the NxDev toolwindow</li>
+            <li>Right click on a code selection and run one of the context menu shortcuts</li>
+            <li>View NxDev's responses in a panel next to the editor</li>
+            <li>Ask follow-up questions to the response (conversation context is maintained)</li>
+            <li>Insert code snippets from the AI's response into the active editor by clicking on them</li>
+        </ul>
+        ]]>
+    </description>
 
     <depends>com.intellij.modules.platform</depends>
 

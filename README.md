@@ -1,6 +1,11 @@
 # nxdev-intellij-plugin
 <!-- Plugin description -->
-Support developer with their daily tasks, currently limited access edition
+    Provide NxDev chat support for developer, the support include:
+    - Ask general questions or use code snippets from the editor to query NxDev via an input box in the NxDev toolwindow
+    - Right click on a code selection and run one of the context menu shortcuts
+    - View NxDev's responses in a panel next to the editor
+    - Ask follow-up questions to the response (conversation context is maintained)
+    - Insert code snippets from the AI's response into the active editor by clicking on them
 
 <!-- Plugin description end -->
 
