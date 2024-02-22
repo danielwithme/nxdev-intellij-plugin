@@ -8,15 +8,15 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.PlatformDataKeys
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.wm.ToolWindowManager
+import org.markdown4j.Markdown4jProcessor
 import vn.com.ntq.nxdev.settings.MyPluginSettings
-//import org.markdown4j.Markdown4jProcessor
 import java.net.HttpURLConnection
 import java.net.URL
 import javax.swing.SwingUtilities
 
 open class PromptAction : AnAction() {
 
-//    val processor = Markdown4jProcessor()
+    val processor = Markdown4jProcessor()
     override fun actionPerformed(e: AnActionEvent) {
         val question = getQuestion(e)
         if (question.isNotEmpty()) {
@@ -51,7 +51,7 @@ open class PromptAction : AnAction() {
                 if (content is NxDevWindowFactory.NxDevWindows) {
                     toolWindow.show();
                     content.requestField.text = getPrefix()
-                    val markdownContent = response.choices[0].message.content
+                    val markdownContent = processor.process(response.choices[0].message.content)
                     content.responseArea.text = markdownContent
                 }
             }

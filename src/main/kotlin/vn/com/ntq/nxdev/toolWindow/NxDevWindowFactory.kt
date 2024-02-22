@@ -12,6 +12,7 @@ import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import org.markdown4j.Markdown4jProcessor
 import vn.com.ntq.nxdev.settings.MyPluginSettings
 import java.awt.BorderLayout
 import java.awt.event.ActionEvent
@@ -41,7 +42,7 @@ class NxDevWindowFactory : ToolWindowFactory {
         val requestField = JTextField("What do you want to ask?", 50)
 //        val responseArea = JTextArea(5, 50)
         val responseArea = JTextPane()
-//        val processor = Markdown4jProcessor()
+        val processor = Markdown4jProcessor()
 
         init {
             val requestPanel = JPanel(BorderLayout())
@@ -61,8 +62,7 @@ class NxDevWindowFactory : ToolWindowFactory {
                 GlobalScope.launch(Dispatchers.IO) {
                     val response = sendRequest(request)
                     SwingUtilities.invokeLater {
-//                        val content = processor.process(response.choices[0].message.content)
-                        val content = response.choices[0].message.content
+                        val content = processor.process(response.choices[0].message.content)
                         responseArea.text =  content
                     }
                 }

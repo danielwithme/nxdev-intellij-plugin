@@ -25,6 +25,7 @@ repositories {
 dependencies {
 //    implementation(libs.annotations)
     implementation ("com.google.code.gson:gson:2.8.6")
+    implementation("org.commonjava.googlecode.markdown4j:markdown4j:2.2-cj-1.0")
 
 }
 
@@ -32,7 +33,7 @@ dependencies {
 kotlin {
     @Suppress("UnstableApiUsage")
     jvmToolchain {
-        languageVersion = JavaLanguageVersion.of(17)
+        languageVersion = JavaLanguageVersion.of(11)
         vendor = JvmVendorSpec.JETBRAINS
     }
 }
