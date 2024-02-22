@@ -18,31 +18,42 @@ open class PromptAction : AnAction() {
 
 //    val processor = Markdown4jProcessor()
     override fun actionPerformed(e: AnActionEvent) {
+        val question = getQuestion(e)
+        if (question.isNotEmpty()) {
+            showResponse(e, question)
+        }
+    }
+     protected open fun getQuestion(e: AnActionEvent): String {
         val project = e.project
         val editor = e.getData(PlatformDataKeys.EDITOR)
         if (project != null && editor != null) {
             val selectionModel = editor.selectionModel
             val selectedText = selectionModel.selectedText
             if (!selectedText.isNullOrEmpty()) {
-                val question = getPrefix() + selectedText
-                // Call to external API
-                val response = sendRequest(question)
-//                Messages.showMessageDialog(project, "Response from API: $response", "API Response", Messages.getInformationIcon())
-                SwingUtilities.invokeLater {
-                    val toolWindowManager = ToolWindowManager.getInstance(project)
-                    val toolWindow = toolWindowManager.getToolWindow("NxDev") // replace with your tool window id
-                    val contentManager = toolWindow?.contentManager
-                    val content = contentManager?.getContent(0)?.component
-                    if (content is NxDevWindowFactory.NxDevWindows) {
-                        toolWindow.show();
-                        content.requestField.text = getPrefix()
-//                        val markdownContent = processor.process(response.choices[0].message.content)
-                        val markdownContent = response.choices[0].message.content
-                        content.responseArea.text = markdownContent
-                    }
-                }
+                return getPrefix() + selectedText
             } else {
                 Messages.showMessageDialog(project, "No text selected", "Error", Messages.getErrorIcon())
+            }
+        }
+        return ""
+    }
+
+    protected open fun showResponse(e: AnActionEvent, question: String) {
+        val project = e.project
+        if (project != null) {
+            // Call to external API
+            val response = sendRequest(question)
+            SwingUtilities.invokeLater {
+                val toolWindowManager = ToolWindowManager.getInstance(project)
+                val toolWindow = toolWindowManager.getToolWindow("NxDev") // replace with your tool window id
+                val contentManager = toolWindow?.contentManager
+                val content = contentManager?.getContent(0)?.component
+                if (content is NxDevWindowFactory.NxDevWindows) {
+                    toolWindow.show();
+                    content.requestField.text = getPrefix()
+                    val markdownContent = response.choices[0].message.content
+                    content.responseArea.text = markdownContent
+                }
             }
         }
     }
