@@ -4,9 +4,15 @@
 
 ## [Unreleased]
 ### Added
-- Translate action
-- Format markdown output 
+- Add logo
+- Add compatibility for 220 version onward
 
+## [0.0.4] - 2024-03-04
+
+### Added
+
+- Add logo
+- - Add compatibility for 220 version onward
 
 ## [0.0.3] - 2024-02-23
 

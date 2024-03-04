@@ -93,7 +93,8 @@ open class PromptAction : AnAction() {
     data class JsonRequest(
             val model: String,
             val messages: List<Message>,
-            val max_tokens: Int
+            val max_tokens: Int,
+            val platform: String = "Intellij"
     )
 
     data class Message(

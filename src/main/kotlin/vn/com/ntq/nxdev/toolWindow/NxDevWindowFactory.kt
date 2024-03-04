@@ -30,7 +30,7 @@ class NxDevWindowFactory : ToolWindowFactory {
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val nxDevWindows = NxDevWindows(toolWindow)
-        val content = ContentFactory.getInstance().createContent(nxDevWindows, null, false)
+        val content = ContentFactory.SERVICE.getInstance().createContent(nxDevWindows, null, false)
         toolWindow.contentManager.addContent(content)
     }
 
@@ -80,7 +80,7 @@ class NxDevWindowFactory : ToolWindowFactory {
                 val jsonRequest = PromptAction.JsonRequest(
                         model = "ntq-coder",
                         messages = listOf(PromptAction.Message("user", message)),
-                        max_tokens = 4096
+                        max_tokens = 4096,
                 )
 
                 val requestBody = Gson().toJson(jsonRequest)
