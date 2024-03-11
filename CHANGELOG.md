@@ -6,6 +6,7 @@
 ### Added
 - Add logo
 - Add compatibility for 220 version onward
+- Add event stream
 
 ## [0.0.4] - 2024-03-04
 
