@@ -7,12 +7,15 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.PlatformDataKeys
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.wm.ToolWindowManager
+import com.intellij.testFramework.LightVirtualFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import okhttp3.*
+import org.intellij.plugins.markdown.ui.preview.html.MarkdownUtil
 import org.markdown4j.Markdown4jProcessor
 import vn.com.ntq.nxdev.settings.MyPluginSettings
 import java.io.IOException
@@ -60,11 +63,12 @@ open class PromptAction : AnAction() {
                 SwingUtilities.invokeLater {
                     toolWindow.show();
                     content.requestField.text = getPrefix()
-                    content.responseArea.text = " "
+//                    content.responseArea.text = " "
                 }
             }
             // Call to external API
             val response = sendEventStreamRequest(question)
+            var responseMarkdown =""
             response?.body()?.source()?.let {source ->
                 while (true) {
                     val event = source.readUtf8Line() ?: break
@@ -75,8 +79,16 @@ open class PromptAction : AnAction() {
 
                     SwingUtilities.invokeLater {
                         if (content is NxDevWindowFactory.NxDevWindows) {
-                            val sd = content.responseArea.styledDocument;
-                            sd.insertString(sd.length, data?.choices?.getOrNull(0)?.delta?.content?:"", null)
+//                            val sd = content.responseArea.styledDocument;
+//                            sd.insertString(sd.length, data?.choices?.getOrNull(0)?.delta?.content?:"", null)
+
+                            responseMarkdown+=data?.choices?.getOrNull(0)?.delta?.content?:""
+                            val file = LightVirtualFile("content.md", responseMarkdown)
+
+                            val html = runReadAction {
+                                MarkdownUtil.generateMarkdownHtml(file, responseMarkdown, toolWindow.project)
+                            }
+                            content.panel.setHtml(html, responseMarkdown.length)
                         }
                     }
 

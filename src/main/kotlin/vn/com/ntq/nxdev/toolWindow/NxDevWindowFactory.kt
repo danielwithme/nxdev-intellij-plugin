@@ -1,16 +1,23 @@
 package vn.com.ntq.nxdev.toolWindow
 
 import com.google.gson.Gson
+import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
+import com.intellij.testFramework.LightVirtualFile
 import com.intellij.ui.content.ContentFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import okhttp3.*
+import org.intellij.lang.annotations.Language
+import org.intellij.plugins.markdown.ui.preview.html.MarkdownUtil
+import org.intellij.plugins.markdown.ui.preview.jcef.MarkdownJCEFHtmlPanel
 import org.markdown4j.Markdown4jProcessor
 import vn.com.ntq.nxdev.actions.PromptAction
 import vn.com.ntq.nxdev.services.MyProjectService
@@ -39,14 +46,15 @@ class NxDevWindowFactory : ToolWindowFactory {
     override fun shouldBeAvailable(project: Project) = true
 
     class NxDevWindows(toolWindow: ToolWindow) : JPanel(BorderLayout()) {
-
         private val service = toolWindow.project.service<MyProjectService>()
         val requestField = JTextField("What do you want to ask?", 50)
 //        val responseArea = JTextArea(5, 50)```
-        val responseArea = JTextPane()
+//        val responseArea = JTextPane()
         val processor = Markdown4jProcessor()
+        lateinit var panel : MarkdownJCEFHtmlPanel
 
         init {
+
             val requestPanel = JPanel(BorderLayout())
             requestPanel.add(requestField, BorderLayout.CENTER)
             requestPanel.add(JButton("Send").apply {
@@ -54,13 +62,29 @@ class NxDevWindowFactory : ToolWindowFactory {
             } , BorderLayout.EAST)
 
             add(requestPanel, BorderLayout.NORTH)
-            responseArea.contentType ="text/html"
-            add(JScrollPane(responseArea), BorderLayout.CENTER)
+//            responseArea.contentType ="text/html"
+//            add(JScrollPane(responseArea), BorderLayout.CENTER)
+            add(createPreviewComponent(toolWindow.project, ""), BorderLayout.CENTER)
         }
-
+        fun createPreviewComponent(
+            project: Project?,
+            @Language("Markdown")
+            content: String
+//            parentDisposable: Disposable
+        ): JComponent {
+            val file = LightVirtualFile("content.md", content)
+            panel = MarkdownJCEFHtmlPanel(project, file)
+//            Disposer.register(parentDisposable, panel)
+            val html = runReadAction {
+                MarkdownUtil.generateMarkdownHtml(file, content, project)
+            }
+            panel.setHtml(html, 0)
+            return panel.component
+        }
         inner class SendRequestActionListener : ActionListener {
             override fun actionPerformed(e: ActionEvent) {
                 val request = requestField.text
+                var responseMarkdown = ""
                 GlobalScope.launch(Dispatchers.IO) {
 //                    val response = sendEventStreamRequest(request)
                     val url = URL("https://genapi.ntq.ai/v1/chat/completions")
@@ -81,8 +105,8 @@ class NxDevWindowFactory : ToolWindowFactory {
                         .build()
 
                     val response = OkHttpClient.Builder().connectionSpecs(createConnectionSpecs()).build().newCall(httpRequest).execute()
-                    responseArea.text = " ";
-                    val sd = responseArea.styledDocument;
+//                    responseArea.text = " ";
+//                    val sd = responseArea.styledDocument;
 
                     response.body()?.source()?.let {source ->
                         while (true) {
@@ -91,10 +115,19 @@ class NxDevWindowFactory : ToolWindowFactory {
                                 continue;
                             val eventJSON = event.removePrefix("data:")
                             val data = Gson().fromJson(eventJSON, ChatCompletion::class.java);
+//
+//                            SwingUtilities.invokeLater {
+////                                val content = processor.process(data?.choices?.getOrNull(0)?.delta?.content?:"")
+//                                sd.insertString(sd.length, data?.choices?.getOrNull(0)?.delta?.content?:"", null)
+//                            }
+                            SwingUtilities.invokeLater{
+                                responseMarkdown+=data?.choices?.getOrNull(0)?.delta?.content?:""
+                                val file = LightVirtualFile("content.md", responseMarkdown)
 
-                            SwingUtilities.invokeLater {
-//                                val content = processor.process(data?.choices?.getOrNull(0)?.delta?.content?:"")
-                                sd.insertString(sd.length, data?.choices?.getOrNull(0)?.delta?.content?:"", null)
+                                val html = runReadAction {
+                                    MarkdownUtil.generateMarkdownHtml(file, responseMarkdown, null)
+                                }
+                                panel.setHtml(html, responseMarkdown.length)
                             }
 
                         }
