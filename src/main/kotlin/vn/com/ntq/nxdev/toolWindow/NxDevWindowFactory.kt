@@ -10,6 +10,7 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.testFramework.LightVirtualFile
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.content.ContentFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -23,11 +24,15 @@ import vn.com.ntq.nxdev.actions.PromptAction
 import vn.com.ntq.nxdev.services.MyProjectService
 import vn.com.ntq.nxdev.settings.MyPluginSettings
 import java.awt.BorderLayout
+import java.awt.Color
+import java.awt.Dimension
+import java.awt.Insets
 import java.awt.event.ActionEvent
 import java.awt.event.ActionListener
 import java.io.IOException
 import java.net.URL
 import javax.swing.*
+import javax.swing.border.LineBorder
 import javax.swing.text.StyledDocument
 
 
@@ -47,23 +52,33 @@ class NxDevWindowFactory : ToolWindowFactory {
 
     class NxDevWindows(toolWindow: ToolWindow) : JPanel(BorderLayout()) {
         private val service = toolWindow.project.service<MyProjectService>()
-        val requestField = JTextField("What do you want to ask?", 50)
+//        val requestField = JTextField("What do you want to ask?", 50)
 //        val responseArea = JTextArea(5, 50)```
 //        val responseArea = JTextPane()
         val processor = Markdown4jProcessor()
         lateinit var panel : MarkdownJCEFHtmlPanel
+        val requestField = JTextArea().apply {
+            margin = Insets(10,10,5,0)
+            isFocusable = true
+            wrapStyleWord  = true
+            lineWrap = true
+        }
+        var scroll = JBScrollPane(requestField, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+            JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED).apply {
+                preferredSize = Dimension(500,100)
+        }
 
         init {
-
             val requestPanel = JPanel(BorderLayout())
-            requestPanel.add(requestField, BorderLayout.CENTER)
-            requestPanel.add(JButton("Send").apply {
+            requestPanel.add(scroll, BorderLayout.CENTER)
+            var buttonPanel = JPanel()
+            buttonPanel.layout = BoxLayout(buttonPanel, BoxLayout.X_AXIS)
+            buttonPanel.add(JButton("Send").apply {
                 addActionListener(SendRequestActionListener())
-            } , BorderLayout.EAST)
+            })
+            requestPanel.add(buttonPanel, BorderLayout.EAST)
 
             add(requestPanel, BorderLayout.NORTH)
-//            responseArea.contentType ="text/html"
-//            add(JScrollPane(responseArea), BorderLayout.CENTER)
             add(createPreviewComponent(toolWindow.project, ""), BorderLayout.CENTER)
         }
         fun createPreviewComponent(
@@ -87,7 +102,7 @@ class NxDevWindowFactory : ToolWindowFactory {
                 var responseMarkdown = ""
                 GlobalScope.launch(Dispatchers.IO) {
 //                    val response = sendEventStreamRequest(request)
-                    val url = URL("https://genapi.ntq.ai/v1/chat/completions")
+                    val url = URL("https://api-nxdev.ntq.ai/api/conversations/stream")
                     val requestBody = RequestBody.create(
                         MediaType.parse("application/json"), Gson().toJson(
                             PromptAction.JsonRequest(
@@ -101,7 +116,8 @@ class NxDevWindowFactory : ToolWindowFactory {
                         .url(url)
                         .post(requestBody)
                         .addHeader("Content-Type", "application/json")
-                        .addHeader("Authorization", "Bearer ${MyPluginSettings.getInstance().apiKey}")
+                        .addHeader("Authorization", MyPluginSettings.getInstance().apiKey)
+                        .addHeader("platform", "Intellij")
                         .build()
 
                     val response = OkHttpClient.Builder().connectionSpecs(createConnectionSpecs()).build().newCall(httpRequest).execute()
@@ -113,21 +129,26 @@ class NxDevWindowFactory : ToolWindowFactory {
                             val event = source.readUtf8Line() ?: break
                             if (event.isBlank())
                                 continue;
-                            val eventJSON = event.removePrefix("data:")
-                            val data = Gson().fromJson(eventJSON, ChatCompletion::class.java);
+                            val eventJSON = event.removePrefix("data: data: ")
+                            try {
+                                val data = Gson().fromJson(eventJSON, ChatCompletion::class.java);
 //
 //                            SwingUtilities.invokeLater {
 ////                                val content = processor.process(data?.choices?.getOrNull(0)?.delta?.content?:"")
 //                                sd.insertString(sd.length, data?.choices?.getOrNull(0)?.delta?.content?:"", null)
 //                            }
-                            SwingUtilities.invokeLater{
-                                responseMarkdown+=data?.choices?.getOrNull(0)?.delta?.content?:""
-                                val file = LightVirtualFile("content.md", responseMarkdown)
+                                SwingUtilities.invokeLater {
+                                    responseMarkdown += data?.choices?.getOrNull(0)?.delta?.content ?: ""
+                                    val file = LightVirtualFile("content.md", responseMarkdown)
 
-                                val html = runReadAction {
-                                    MarkdownUtil.generateMarkdownHtml(file, responseMarkdown, null)
+                                    val html = runReadAction {
+                                        MarkdownUtil.generateMarkdownHtml(file, responseMarkdown, null)
+                                    }
+                                    panel.setHtml(html, responseMarkdown.length)
                                 }
-                                panel.setHtml(html, responseMarkdown.length)
+                            } catch (e:Exception) {
+                                println(e)
+                                continue;
                             }
 
                         }
@@ -143,7 +164,7 @@ class NxDevWindowFactory : ToolWindowFactory {
                         CipherSuite.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
                     )
                     .build()
-                return listOf<ConnectionSpec>(spec)
+                return listOf<ConnectionSpec>(spec, ConnectionSpec.CLEARTEXT)
             }
 //            private fun sendRequest(message: String): ChatCompletion {
 //                val url = URL("https://genapi.ntq.ai/v1/chat/completions")

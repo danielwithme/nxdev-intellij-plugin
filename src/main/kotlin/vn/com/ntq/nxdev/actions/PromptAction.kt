@@ -74,22 +74,25 @@ open class PromptAction : AnAction() {
                     val event = source.readUtf8Line() ?: break
                     if (event.isBlank())
                         continue;
-                    val eventJSON = event.removePrefix("data:")
-                    val data = Gson().fromJson(eventJSON, ChatCompletion::class.java);
+                    val eventJSON = event.removePrefix("data: data: ")
+                    try {
+                        val data = Gson().fromJson(eventJSON, ChatCompletion::class.java);
 
-                    SwingUtilities.invokeLater {
-                        if (content is NxDevWindowFactory.NxDevWindows) {
-//                            val sd = content.responseArea.styledDocument;
-//                            sd.insertString(sd.length, data?.choices?.getOrNull(0)?.delta?.content?:"", null)
+                        SwingUtilities.invokeLater {
+                            if (content is NxDevWindowFactory.NxDevWindows) {
+                                responseMarkdown+=data?.choices?.getOrNull(0)?.delta?.content?:""
+                                val file = LightVirtualFile("content.md", responseMarkdown)
 
-                            responseMarkdown+=data?.choices?.getOrNull(0)?.delta?.content?:""
-                            val file = LightVirtualFile("content.md", responseMarkdown)
-
-                            val html = runReadAction {
-                                MarkdownUtil.generateMarkdownHtml(file, responseMarkdown, toolWindow.project)
+                                val html = runReadAction {
+                                    MarkdownUtil.generateMarkdownHtml(file, responseMarkdown, toolWindow.project)
+                                }
+                                content.panel.setHtml(html, responseMarkdown.length)
                             }
-                            content.panel.setHtml(html, responseMarkdown.length)
                         }
+
+                    } catch (e:Exception) {
+                        println(e)
+                        continue;
                     }
 
                 }
@@ -104,7 +107,7 @@ open class PromptAction : AnAction() {
 
 
     private fun sendEventStreamRequest(message: String): Response? {
-        val url = URL("https://genapi.ntq.ai/v1/chat/completions")
+        val url = URL("https://api-nxdev.ntq.ai/api/conversations/stream")
         val requestBody = RequestBody.create(
             MediaType.parse("application/json"), Gson().toJson(
                 PromptAction.JsonRequest(
@@ -118,7 +121,8 @@ open class PromptAction : AnAction() {
             .url(url)
             .post(requestBody)
             .addHeader("Content-Type", "application/json")
-            .addHeader("Authorization", "Bearer ${MyPluginSettings.getInstance().apiKey}")
+            .addHeader("Authorization", MyPluginSettings.getInstance().apiKey)
+            .addHeader("platform", "Intellij")
             .build()
 
         return OkHttpClient.Builder().connectionSpecs(createConnectionSpecs()).build().newCall(request).execute()
@@ -131,14 +135,13 @@ open class PromptAction : AnAction() {
                 CipherSuite.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
             )
             .build()
-        return listOf<ConnectionSpec>(spec)
+        return listOf<ConnectionSpec>(spec, ConnectionSpec.CLEARTEXT)
     }
 
     data class JsonRequest(
             val model: String,
             val messages: List<Message>,
             val max_tokens: Int,
-            val platform: String = "Intellij",
             val stream: Boolean = true
     )
 
