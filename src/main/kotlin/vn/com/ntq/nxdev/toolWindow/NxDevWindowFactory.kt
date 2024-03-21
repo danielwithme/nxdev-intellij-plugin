@@ -78,7 +78,7 @@ class NxDevWindowFactory : ToolWindowFactory {
             })
             requestPanel.add(buttonPanel, BorderLayout.EAST)
 
-            add(requestPanel, BorderLayout.NORTH)
+            add(requestPanel, BorderLayout.SOUTH)
             add(createPreviewComponent(toolWindow.project, ""), BorderLayout.CENTER)
         }
         fun createPreviewComponent(
@@ -153,6 +153,9 @@ class NxDevWindowFactory : ToolWindowFactory {
 
                         }
 
+                    }
+                    SwingUtilities.invokeLater {
+                        requestField.text = ""
                     }
                 }
             }
