@@ -1,12 +1,11 @@
 package vn.com.ntq.nxdev.toolWindow
 
 import com.google.gson.Gson
-import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.runReadAction
+import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.testFramework.LightVirtualFile
@@ -23,17 +22,15 @@ import org.markdown4j.Markdown4jProcessor
 import vn.com.ntq.nxdev.actions.PromptAction
 import vn.com.ntq.nxdev.services.MyProjectService
 import vn.com.ntq.nxdev.settings.MyPluginSettings
+import util.TextPrompt
 import java.awt.BorderLayout
-import java.awt.Color
 import java.awt.Dimension
+import java.awt.Font
 import java.awt.Insets
 import java.awt.event.ActionEvent
 import java.awt.event.ActionListener
-import java.io.IOException
 import java.net.URL
 import javax.swing.*
-import javax.swing.border.LineBorder
-import javax.swing.text.StyledDocument
 
 
 class NxDevWindowFactory : ToolWindowFactory {
@@ -43,9 +40,11 @@ class NxDevWindowFactory : ToolWindowFactory {
     }
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
-        val nxDevWindows = NxDevWindows(toolWindow)
-        val content = ContentFactory.SERVICE.getInstance().createContent(nxDevWindows, null, false)
-        toolWindow.contentManager.addContent(content)
+        runWriteAction {
+            val nxDevWindows = NxDevWindows(toolWindow)
+            val content = ContentFactory.SERVICE.getInstance().createContent(nxDevWindows, null, false)
+            toolWindow.contentManager.addContent(content)
+        }
     }
 
     override fun shouldBeAvailable(project: Project) = true
@@ -69,6 +68,12 @@ class NxDevWindowFactory : ToolWindowFactory {
         }
 
         init {
+            val tp1 = TextPrompt("What do you want to ask?", requestField, TextPrompt.Show.FOCUS_LOST)
+            tp1.changeStyle(Font.ITALIC)
+
+            tp1.changeAlpha(0.5f)
+            tp1.verticalAlignment = SwingConstants.TOP
+
             val requestPanel = JPanel(BorderLayout())
             requestPanel.add(scroll, BorderLayout.CENTER)
             var buttonPanel = JPanel()

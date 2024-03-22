@@ -4,10 +4,8 @@
 
 ## [Unreleased]
 ### Added
-- Add logo
-- Add compatibility for 220 version onward
-- Add event stream
-- Update markdown view using JCEF
+- Change backend endpoint
+- Update view: question box, placeholder, multiline support 
 
 ## [0.0.6] - 2024-03-12
 
