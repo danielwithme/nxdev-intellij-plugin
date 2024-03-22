@@ -5,8 +5,12 @@
 ## [Unreleased]
 ### Added
 - Change backend endpoint
-- Update view: question box, placeholder, multiline support 
+- Update view: question box, placeholder, multiline support
 
+## [0.0.7] - 2024-03-22
+- Change backend endpoint
+- Update view: question box, placeholder, multiline support
+- 
 ## [0.0.6] - 2024-03-12
 
 ### Added
