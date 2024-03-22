@@ -111,7 +111,6 @@ class NxDevWindowFactory : ToolWindowFactory {
                     val requestBody = RequestBody.create(
                         MediaType.parse("application/json"), Gson().toJson(
                             PromptAction.JsonRequest(
-                                model = "ntq-coder",
                                 messages = listOf(PromptAction.Message("user", request)),
                                 max_tokens = 4096
                             )

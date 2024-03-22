@@ -112,7 +112,6 @@ open class PromptAction : AnAction() {
         val requestBody = RequestBody.create(
             MediaType.parse("application/json"), Gson().toJson(
                 PromptAction.JsonRequest(
-                    model = "ntq-coder",
                     messages = listOf(PromptAction.Message("user", message)),
                     max_tokens = 4096
                 )
@@ -140,7 +139,7 @@ open class PromptAction : AnAction() {
     }
 
     data class JsonRequest(
-            val model: String,
+            val model: String = "1",
             val messages: List<Message>,
             val max_tokens: Int,
             val stream: Boolean = true
