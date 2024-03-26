@@ -83,7 +83,18 @@ class NxDevWindowFactory : ToolWindowFactory {
                 addActionListener(SendRequestActionListener())
             })
             requestPanel.add(buttonPanel, BorderLayout.EAST)
-
+            var buttonNorthPanel = JPanel()
+            buttonNorthPanel.layout = BoxLayout(buttonNorthPanel, BoxLayout.X_AXIS)
+            buttonNorthPanel.add(Box.createHorizontalGlue())
+            buttonNorthPanel.add(JButton("Like").apply {
+                addActionListener(null)
+            })
+            buttonNorthPanel.add(Box.createVerticalGlue())
+            buttonNorthPanel.add(JButton("DisLike").apply {
+                addActionListener(null)
+            })
+            buttonNorthPanel.add(Box.createHorizontalGlue())
+            requestPanel.add(buttonNorthPanel, BorderLayout.NORTH)
             add(requestPanel, BorderLayout.SOUTH)
             add(createPreviewComponent(toolWindow.project, ""), BorderLayout.CENTER)
         }
@@ -106,6 +117,15 @@ class NxDevWindowFactory : ToolWindowFactory {
             override fun actionPerformed(e: ActionEvent) {
                 val request = requestField.text
                 var responseMarkdown = ""
+                fun responseMessage(responseMarkdown : String){
+                    SwingUtilities.invokeLater {
+                        val file = LightVirtualFile("content.md", responseMarkdown)
+                        val html = runReadAction {
+                            MarkdownUtil.generateMarkdownHtml(file, responseMarkdown, null)
+                        }
+                        panel.setHtml(html, responseMarkdown.length)
+                    }
+                }
                 GlobalScope.launch(Dispatchers.IO) {
                     try {
 //                    val response = sendEventStreamRequest(request)
@@ -143,15 +163,8 @@ class NxDevWindowFactory : ToolWindowFactory {
 ////                                val content = processor.process(data?.choices?.getOrNull(0)?.delta?.content?:"")
 //                                sd.insertString(sd.length, data?.choices?.getOrNull(0)?.delta?.content?:"", null)
 //                            }
-                                    SwingUtilities.invokeLater {
-                                        responseMarkdown += data?.choices?.getOrNull(0)?.delta?.content ?: ""
-                                        val file = LightVirtualFile("content.md", responseMarkdown)
-
-                                        val html = runReadAction {
-                                            MarkdownUtil.generateMarkdownHtml(file, responseMarkdown, null)
-                                        }
-                                        panel.setHtml(html, responseMarkdown.length)
-                                    }
+                                    responseMarkdown += data?.choices?.getOrNull(0)?.delta?.content ?: ""
+                                    responseMessage(responseMarkdown)
                                 } catch (e: Exception) {
                                     println(e)
                                     continue;
@@ -161,14 +174,9 @@ class NxDevWindowFactory : ToolWindowFactory {
 
                         }
                     }catch(e: Exception){
-                        SwingUtilities.invokeLater {
-                            responseMarkdown = "There is a lot of traffic at the moment, please try again later."
-                            val file = LightVirtualFile("content.md", responseMarkdown)
-                            val html = runReadAction {
-                                MarkdownUtil.generateMarkdownHtml(file, responseMarkdown, null)
-                            }
-                            panel.setHtml(html, responseMarkdown.length)
-                        }
+                        println(e)
+                        responseMarkdown = "There is a lot of traffic at the moment, please try again later."
+                        responseMessage(responseMarkdown)
                     }finally {
                         SwingUtilities.invokeLater {
                             requestField.text = ""
