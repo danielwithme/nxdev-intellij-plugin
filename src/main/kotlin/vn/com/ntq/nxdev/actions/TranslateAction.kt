@@ -16,7 +16,7 @@ class TranslateAction : PromptAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
         val languages = arrayOf("English", "Vietnamese")
-        val targetLangIndex = Messages.showChooseDialog("Choose a language", "Choose Language", languages, "English", null)
+        val targetLangIndex = Messages.showDialog(e.project,"Choose a language", "Choose Language", languages, 0, Messages.getQuestionIcon())
         targetLanguage = languages[targetLangIndex];
 
         val question = getQuestion(e)
