@@ -11,6 +11,7 @@ import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.content.ContentFactory
+import io.ktor.utils.io.errors.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -106,60 +107,72 @@ class NxDevWindowFactory : ToolWindowFactory {
                 val request = requestField.text
                 var responseMarkdown = ""
                 GlobalScope.launch(Dispatchers.IO) {
+                    try {
 //                    val response = sendEventStreamRequest(request)
-                    val url = URL("https://api-nxdev.ntq.ai/api/conversations/stream")
-                    val requestBody = RequestBody.create(
-                        MediaType.parse("application/json"), Gson().toJson(
-                            PromptAction.JsonRequest(
-                                messages = listOf(PromptAction.Message("user", request)),
-                                max_tokens = 4096
-                            )
-                        ))
+                        val url = URL("https://api-nxdev.ntq.ai/api/conversations/stream")
+                        val requestBody = RequestBody.create(
+                            MediaType.parse("application/json"), Gson().toJson(
+                                PromptAction.JsonRequest(
+                                    messages = listOf(PromptAction.Message("user", request)),
+                                    max_tokens = 4096
+                                )
+                            ))
 
-                    val httpRequest = Request.Builder()
-                        .url(url)
-                        .post(requestBody)
-                        .addHeader("Content-Type", "application/json")
-                        .addHeader("Authorization", MyPluginSettings.getInstance().apiKey)
-                        .addHeader("platform", "Intellij")
-                        .build()
+                        val httpRequest = Request.Builder()
+                            .url(url)
+                            .post(requestBody)
+                            .addHeader("Content-Type", "application/json")
+                            .addHeader("Authorization", MyPluginSettings.getInstance().apiKey)
+                            .addHeader("platform", "Intellij")
+                            .build()
 
-                    val response = OkHttpClient.Builder().connectionSpecs(createConnectionSpecs()).build().newCall(httpRequest).execute()
+                        val response = OkHttpClient.Builder().connectionSpecs(createConnectionSpecs()).build().newCall(httpRequest).execute()
 //                    responseArea.text = " ";
 //                    val sd = responseArea.styledDocument;
 
-                    response.body()?.source()?.let {source ->
-                        while (true) {
-                            val event = source.readUtf8Line() ?: break
-                            if (event.isBlank())
-                                continue;
-                            val eventJSON = event.removePrefix("data: data: ")
-                            try {
-                                val data = Gson().fromJson(eventJSON, ChatCompletion::class.java);
+                        response.body()?.source()?.let { source ->
+                            while (true) {
+                                val event = source.readUtf8Line() ?: break
+                                if (event.isBlank())
+                                    continue;
+                                val eventJSON = event.removePrefix("data: data: ")
+                                try {
+                                    val data = Gson().fromJson(eventJSON, ChatCompletion::class.java);
 //
 //                            SwingUtilities.invokeLater {
 ////                                val content = processor.process(data?.choices?.getOrNull(0)?.delta?.content?:"")
 //                                sd.insertString(sd.length, data?.choices?.getOrNull(0)?.delta?.content?:"", null)
 //                            }
-                                SwingUtilities.invokeLater {
-                                    responseMarkdown += data?.choices?.getOrNull(0)?.delta?.content ?: ""
-                                    val file = LightVirtualFile("content.md", responseMarkdown)
+                                    SwingUtilities.invokeLater {
+                                        responseMarkdown += data?.choices?.getOrNull(0)?.delta?.content ?: ""
+                                        val file = LightVirtualFile("content.md", responseMarkdown)
 
-                                    val html = runReadAction {
-                                        MarkdownUtil.generateMarkdownHtml(file, responseMarkdown, null)
+                                        val html = runReadAction {
+                                            MarkdownUtil.generateMarkdownHtml(file, responseMarkdown, null)
+                                        }
+                                        panel.setHtml(html, responseMarkdown.length)
                                     }
-                                    panel.setHtml(html, responseMarkdown.length)
+                                } catch (e: Exception) {
+                                    println(e)
+                                    continue;
                                 }
-                            } catch (e:Exception) {
-                                println(e)
-                                continue;
+
                             }
 
                         }
-
-                    }
-                    SwingUtilities.invokeLater {
-                        requestField.text = ""
+                    }catch(e: Exception){
+                        SwingUtilities.invokeLater {
+                            responseMarkdown = "There is a lot of traffic at the moment, please try again later."
+                            val file = LightVirtualFile("content.md", responseMarkdown)
+                            val html = runReadAction {
+                                MarkdownUtil.generateMarkdownHtml(file, responseMarkdown, null)
+                            }
+                            panel.setHtml(html, responseMarkdown.length)
+                        }
+                    }finally {
+                        SwingUtilities.invokeLater {
+                            requestField.text = ""
+                        }
                     }
                 }
             }
