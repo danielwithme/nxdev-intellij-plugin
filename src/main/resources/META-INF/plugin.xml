@@ -59,6 +59,9 @@
         <action class="vn.com.ntq.nxdev.actions.TranslateAction" text="NxDev: Translate">
             <add-to-group group-id="NxDevActionGroup"/>
         </action>
+        <action class="vn.com.ntq.nxdev.actions.ViewHistoryAction" text="NxDev: View History">
+            <add-to-group group-id="NxDevActionGroup"/>
+        </action>
     </actions>
 
 </idea-plugin>
