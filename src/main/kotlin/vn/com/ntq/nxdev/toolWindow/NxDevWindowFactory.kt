@@ -11,7 +11,7 @@ import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.content.ContentFactory
-import io.ktor.utils.io.errors.*
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -51,10 +51,12 @@ class NxDevWindowFactory : ToolWindowFactory {
     override fun shouldBeAvailable(project: Project) = true
 
     class NxDevWindows(toolWindow: ToolWindow) : JPanel(BorderLayout()) {
+
+        val ROLE_NXDEV_TEXT = "**NX_DEV**: "
+        val ROLE_YOU_TEXT = "**YOU**: "
+        var conversation = ""
+
         private val service = toolWindow.project.service<MyProjectService>()
-//        val requestField = JTextField("What do you want to ask?", 50)
-//        val responseArea = JTextArea(5, 50)```
-//        val responseArea = JTextPane()
         val processor = Markdown4jProcessor()
         lateinit var panel : MarkdownJCEFHtmlPanel
         val requestField = JTextArea().apply {
@@ -102,66 +104,62 @@ class NxDevWindowFactory : ToolWindowFactory {
             panel.setHtml(html, 0)
             return panel.component
         }
+        fun displayConversation(){
+            SwingUtilities.invokeLater {
+                val file = LightVirtualFile("content.md", conversation)
+
+                val html = runReadAction {
+                    MarkdownUtil.generateMarkdownHtml(file, conversation, null)
+                }
+                panel.setHtml(html, conversation.length)
+            }
+        }
+        fun callAI(request: String): Response? {
+//                    val response = sendEventStreamRequest(request)
+            val url = URL("https://api-nxdev.ntq.ai/api/conversations/stream")
+            val requestBody = RequestBody.create(
+                MediaType.parse("application/json"), Gson().toJson(
+                    PromptAction.JsonRequest(
+                        messages = listOf(PromptAction.Message("user", request)),
+                        max_tokens = 4096
+                    )
+                ))
+
+            val httpRequest = Request.Builder()
+                .url(url)
+                .post(requestBody)
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Authorization", MyPluginSettings.getInstance().apiKey)
+                .addHeader("platform", "Intellij")
+                .build()
+
+            return OkHttpClient.Builder().connectionSpecs(createConnectionSpecs()).build().newCall(httpRequest).execute()
+
+        }
+
+
+        private fun createConnectionSpecs(): List<ConnectionSpec>? {
+            val spec = ConnectionSpec.Builder(ConnectionSpec.COMPATIBLE_TLS)
+                .tlsVersions(TlsVersion.TLS_1_2)
+                .cipherSuites(
+                    CipherSuite.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+                )
+                .build()
+            return listOf<ConnectionSpec>(spec, ConnectionSpec.CLEARTEXT)
+        }
         inner class SendRequestActionListener : ActionListener {
+            @OptIn(DelicateCoroutinesApi::class)
             override fun actionPerformed(e: ActionEvent) {
                 val request = requestField.text
-                var responseMarkdown = ""
                 GlobalScope.launch(Dispatchers.IO) {
                     try {
-//                    val response = sendEventStreamRequest(request)
-                        val url = URL("https://api-nxdev.ntq.ai/api/conversations/stream")
-                        val requestBody = RequestBody.create(
-                            MediaType.parse("application/json"), Gson().toJson(
-                                PromptAction.JsonRequest(
-                                    messages = listOf(PromptAction.Message("user", request)),
-                                    max_tokens = 4096
-                                )
-                            ))
+                        addQuestion(request)
+                        addResponse(request)
 
-                        val httpRequest = Request.Builder()
-                            .url(url)
-                            .post(requestBody)
-                            .addHeader("Content-Type", "application/json")
-                            .addHeader("Authorization", MyPluginSettings.getInstance().apiKey)
-                            .addHeader("platform", "Intellij")
-                            .build()
-
-                        val response = OkHttpClient.Builder().connectionSpecs(createConnectionSpecs()).build().newCall(httpRequest).execute()
-//                    responseArea.text = " ";
-//                    val sd = responseArea.styledDocument;
-
-                        response.body()?.source()?.let { source ->
-                            while (true) {
-                                val event = source.readUtf8Line() ?: break
-                                if (event.isBlank())
-                                    continue;
-                                val eventJSON = event.removePrefix("data: data: ")
-                                try {
-                                    val data = Gson().fromJson(eventJSON, ChatCompletion::class.java);
-//
-//                            SwingUtilities.invokeLater {
-////                                val content = processor.process(data?.choices?.getOrNull(0)?.delta?.content?:"")
-//                                sd.insertString(sd.length, data?.choices?.getOrNull(0)?.delta?.content?:"", null)
-//                            }
-                                    SwingUtilities.invokeLater {
-                                        responseMarkdown += data?.choices?.getOrNull(0)?.delta?.content ?: ""
-                                        val file = LightVirtualFile("content.md", responseMarkdown)
-
-                                        val html = runReadAction {
-                                            MarkdownUtil.generateMarkdownHtml(file, responseMarkdown, null)
-                                        }
-                                        panel.setHtml(html, responseMarkdown.length)
-                                    }
-                                } catch (e: Exception) {
-                                    println(e)
-                                    continue;
-                                }
-
-                            }
-
-                        }
                     }catch(e: Exception){
                         SwingUtilities.invokeLater {
+
+                            var responseMarkdown = ""
                             responseMarkdown = "There is a lot of traffic at the moment, please try again later."
                             val file = LightVirtualFile("content.md", responseMarkdown)
                             val html = runReadAction {
@@ -177,44 +175,50 @@ class NxDevWindowFactory : ToolWindowFactory {
                 }
             }
 
-            private fun createConnectionSpecs(): List<ConnectionSpec>? {
-                val spec = ConnectionSpec.Builder(ConnectionSpec.COMPATIBLE_TLS)
-                    .tlsVersions(TlsVersion.TLS_1_2)
-                    .cipherSuites(
-                        CipherSuite.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
-                    )
-                    .build()
-                return listOf<ConnectionSpec>(spec, ConnectionSpec.CLEARTEXT)
-            }
-//            private fun sendRequest(message: String): ChatCompletion {
-//                val url = URL("https://genapi.ntq.ai/v1/chat/completions")
-//                val conn = url.openConnection() as HttpURLConnection
-//                conn.requestMethod = "POST"
-//                conn.setRequestProperty("Content-Type", "application/json")
-//                var authorizationKey = "Bearer " + MyPluginSettings.getInstance().apiKey;
-//                conn.setRequestProperty("Authorization", authorizationKey)
-//                conn.doOutput = true
-//
-//                val jsonRequest = PromptAction.JsonRequest(
-//                        model = "ntq-coder",
-//                        messages = listOf(PromptAction.Message("user", message)),
-//                        max_tokens = 4096
-//                )
-//
-//                val requestBody = Gson().toJson(jsonRequest)
-//                conn.outputStream.write(requestBody.toByteArray())
-//
-//                val responseCode = conn.responseCode
-//                val response = if (responseCode == HttpURLConnection.HTTP_OK) {
-//                    conn.inputStream.reader().readText()
-//                } else {
-//                    "Error: $responseCode"
-//                }
-//
-//                conn.disconnect()
-//                return Gson().fromJson(response, ChatCompletion::class.java)
-//            }
+        }
 
+        private fun extractResponseToConversation(response: Response?) {
+
+            response?.body()?.source()?.let { source ->
+
+                while (true) {
+                    val event = source.readUtf8Line() ?: break
+                    if (event.isBlank())
+                        continue;
+                    val eventJSON = event.removePrefix("data: data: ")
+                    try {
+                        val data = Gson().fromJson(eventJSON, ChatCompletion::class.java);
+                        SwingUtilities.invokeLater {
+                            conversation += data?.choices?.getOrNull(0)?.delta?.content ?: ""
+                            displayConversation()
+                        }
+                    } catch (e: Exception) {
+                        println(e)
+                        continue;
+                    }
+
+                }
+            }
+        }
+
+        fun addQuestion(question: String) {
+            conversation = ensureLineBreakAtEnd(conversation);
+            conversation += ROLE_YOU_TEXT
+            conversation += question
+            displayConversation()
+        }
+
+        fun addResponse(question: String) {
+            val response = callAI(question)
+            conversation = ensureLineBreakAtEnd(conversation);
+            conversation += ROLE_NXDEV_TEXT
+            extractResponseToConversation(response)
+
+        }
+        fun ensureLineBreakAtEnd(input: String): String {
+            return if (input.endsWith("\n")) {
+                if (input.endsWith("\n\n")) input else "$input\n"
+            } else "$input\n\n"
         }
     }
 

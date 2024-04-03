@@ -11,6 +11,7 @@ import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.testFramework.LightVirtualFile
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -44,7 +45,8 @@ open class PromptAction : AnAction() {
                 selectedText = selectionModel.selectedText.toString()
             }
             if (!selectedText.isNullOrEmpty()) {
-                return getPrefix() + selectedText
+                return getPrefix() +
+                        "\n```Java\n$selectedText\n```\n"
             } else {
                 Messages.showMessageDialog(project, "No text selected", "Error", Messages.getErrorIcon())
             }
@@ -52,6 +54,7 @@ open class PromptAction : AnAction() {
         return ""
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     protected open fun showResponse(e: AnActionEvent, question: String) {
         val project = e.project
         if (project != null) {
@@ -63,41 +66,11 @@ open class PromptAction : AnAction() {
                 SwingUtilities.invokeLater {
                     toolWindow.show();
                     content.requestField.text = getPrefix()
-//                    content.responseArea.text = " "
-                }
-            }
-            // Call to external API
-            val response = sendEventStreamRequest(question)
-            var responseMarkdown =""
-            response?.body()?.source()?.let {source ->
-                while (true) {
-                    val event = source.readUtf8Line() ?: break
-                    if (event.isBlank())
-                        continue;
-                    val eventJSON = event.removePrefix("data: data: ")
-                    try {
-                        val data = Gson().fromJson(eventJSON, ChatCompletion::class.java);
-
-                        SwingUtilities.invokeLater {
-                            if (content is NxDevWindowFactory.NxDevWindows) {
-                                responseMarkdown+=data?.choices?.getOrNull(0)?.delta?.content?:""
-                                val file = LightVirtualFile("content.md", responseMarkdown)
-
-                                val html = runReadAction {
-                                    MarkdownUtil.generateMarkdownHtml(file, responseMarkdown, toolWindow.project)
-                                }
-                                content.panel.setHtml(html, responseMarkdown.length)
-                            }
-                        }
-
-                    } catch (e:Exception) {
-                        println(e)
-                        continue;
+                    GlobalScope.launch(Dispatchers.IO) {
+                        content.addQuestion(question)
+                        content.addResponse(question)
                     }
-
                 }
-
-
             }
         }
     }
