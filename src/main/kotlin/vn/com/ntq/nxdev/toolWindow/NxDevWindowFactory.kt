@@ -30,8 +30,16 @@ import java.awt.Font
 import java.awt.Insets
 import java.awt.event.ActionEvent
 import java.awt.event.ActionListener
+import java.awt.event.KeyAdapter
+import java.awt.event.KeyEvent
 import java.net.URL
 import javax.swing.*
+import java.awt.event.AdjustmentEvent
+
+import java.awt.event.AdjustmentListener
+
+
+
 
 
 class NxDevWindowFactory : ToolWindowFactory {
@@ -59,6 +67,7 @@ class NxDevWindowFactory : ToolWindowFactory {
         private val service = toolWindow.project.service<MyProjectService>()
         val processor = Markdown4jProcessor()
         lateinit var panel : MarkdownJCEFHtmlPanel
+        val button = JButton("Send")
         val requestField = JTextArea().apply {
             margin = Insets(10,10,5,0)
             isFocusable = true
@@ -81,7 +90,14 @@ class NxDevWindowFactory : ToolWindowFactory {
             requestPanel.add(scroll, BorderLayout.CENTER)
             var buttonPanel = JPanel()
             buttonPanel.layout = BoxLayout(buttonPanel, BoxLayout.X_AXIS)
-            buttonPanel.add(JButton("Send").apply {
+            button.isEnabled=false
+            requestField.addKeyListener(object : KeyAdapter() {
+                override fun keyReleased(e: KeyEvent?) {
+                    super.keyReleased(e)
+                    button.isEnabled = requestField.text.isNotEmpty()
+                }
+            })
+            buttonPanel.add(button.apply {
                 addActionListener(SendRequestActionListener())
             })
             requestPanel.add(buttonPanel, BorderLayout.EAST)
@@ -112,6 +128,9 @@ class NxDevWindowFactory : ToolWindowFactory {
                     MarkdownUtil.generateMarkdownHtml(file, conversation, null)
                 }
                 panel.setHtml(html, conversation.length)
+
+                //Scroll to bottom
+                panel.scrollBy(0, 100)
             }
         }
         fun callAI(request: String): Response? {
@@ -170,6 +189,7 @@ class NxDevWindowFactory : ToolWindowFactory {
                     }finally {
                         SwingUtilities.invokeLater {
                             requestField.text = ""
+                            button.isEnabled = false
                         }
                     }
                 }
