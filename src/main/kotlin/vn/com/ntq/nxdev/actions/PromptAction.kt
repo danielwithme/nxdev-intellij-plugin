@@ -54,24 +54,23 @@ open class PromptAction : AnAction() {
         return ""
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     protected open fun showResponse(e: AnActionEvent, question: String) {
-        val project = e.project
-        if (project != null) {
-            val toolWindowManager = ToolWindowManager.getInstance(project)
-            val toolWindow = toolWindowManager.getToolWindow("NxDev") // replace with your tool window id
-            val contentManager = toolWindow?.contentManager
-            val content = contentManager?.getContent(0)?.component
-            if (content is NxDevWindowFactory.NxDevWindows) {
-                SwingUtilities.invokeLater {
-                    toolWindow.show();
-                    content.requestField.text = getPrefix()
-                    GlobalScope.launch(Dispatchers.IO) {
-                        content.addQuestion(question)
-                        content.addResponse(question)
+            SwingUtilities.invokeLater {
+                val project = e.project
+                if (project != null) {
+                    val toolWindowManager = ToolWindowManager.getInstance(project)
+                    val toolWindow = toolWindowManager.getToolWindow("NxDev") // replace with your tool window id
+                    val contentManager = toolWindow?.contentManager
+                    val content = contentManager?.getContent(0)?.component
+                    if (content is NxDevWindowFactory.NxDevWindows) {
+                        toolWindow.show();
+                        content.requestField.text = getPrefix()
+                        GlobalScope.launch(Dispatchers.IO) {
+                            content.addQuestion(question)
+                            content.addResponse(question)
+                        }
                     }
                 }
-            }
         }
     }
 
