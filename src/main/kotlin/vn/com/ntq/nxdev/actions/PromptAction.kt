@@ -66,8 +66,11 @@ open class PromptAction : AnAction() {
                         toolWindow.show();
                         content.requestField.text = getPrefix()
                         GlobalScope.launch(Dispatchers.IO) {
+                            content.requestField.isEnabled = false
+                            content.requestField.text = ""
                             content.addQuestion(question)
                             content.addResponse(question)
+                            content.requestField.isEnabled = true
                         }
                     }
                 }
