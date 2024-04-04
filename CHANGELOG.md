@@ -7,10 +7,14 @@
 - Change backend endpoint
 - Update view: question box, placeholder, multiline support
 
+## [0.0.8] - 2024-04-04
+- Update conversation view
+- Improve UI UX: enter, shift-enter, auto clearing questions
+
 ## [0.0.7] - 2024-03-22
 - Change backend endpoint
 - Update view: question box, placeholder, multiline support
-- 
+
 ## [0.0.6] - 2024-03-12
 
 ### Added
