@@ -94,7 +94,22 @@ class NxDevWindowFactory : ToolWindowFactory {
             requestField.addKeyListener(object : KeyAdapter() {
                 override fun keyReleased(e: KeyEvent?) {
                     super.keyReleased(e)
-                    button.isEnabled = requestField.text.isNotEmpty()
+                    button.isEnabled = !requestField.text.isBlank()
+                }
+                override fun keyPressed(e: KeyEvent?) {
+                    super.keyPressed(e)
+                    if ((e?.keyCode == KeyEvent.VK_ENTER)&&(e.modifiersEx == KeyEvent.SHIFT_DOWN_MASK)) {
+                        val caretPosition = requestField.caretPosition
+                        val text = requestField.text
+                        val newText = StringBuilder(text)
+                        newText.insert(caretPosition, "\n")
+                        requestField.text = newText.toString()
+                        requestField.caretPosition = caretPosition + 1
+                    }else if(e?.keyCode == KeyEvent.VK_ENTER){
+                        button.doClick()
+                        requestField.isEnabled = false
+                        requestField.text = ""
+                    }
                 }
             })
             buttonPanel.add(button.apply {
@@ -190,6 +205,7 @@ class NxDevWindowFactory : ToolWindowFactory {
                         SwingUtilities.invokeLater {
                             requestField.text = ""
                             button.isEnabled = false
+                            requestField.isEnabled = true
                         }
                     }
                 }
