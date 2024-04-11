@@ -1,27 +1,22 @@
 package vn.com.ntq.nxdev.actions
 
-import vn.com.ntq.nxdev.toolWindow.ChatCompletion
-import vn.com.ntq.nxdev.toolWindow.NxDevWindowFactory
 import com.google.gson.Gson
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.PlatformDataKeys
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.wm.ToolWindowManager
-import com.intellij.testFramework.LightVirtualFile
-import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import okhttp3.*
-import org.intellij.plugins.markdown.ui.preview.html.MarkdownUtil
 import org.markdown4j.Markdown4jProcessor
 import vn.com.ntq.nxdev.settings.MyPluginSettings
-import java.io.IOException
-import java.net.HttpURLConnection
+import vn.com.ntq.nxdev.toolWindow.NxDevWindowFactory
 import java.net.URL
+import java.time.Instant
+import java.util.*
 import javax.swing.SwingUtilities
 
 open class PromptAction : AnAction() {
@@ -70,6 +65,8 @@ open class PromptAction : AnAction() {
                             content.requestField.text = ""
                             content.addQuestion(question)
                             content.addResponse(question)
+                            content.addToConversation(question, content.responseMessage)
+                            content.responseMessage = ""
                             content.requestField.isEnabled = true
                         }
                     }
@@ -81,14 +78,25 @@ open class PromptAction : AnAction() {
         return "";
     }
 
-
+    val ConversationId = UUID.randomUUID().toString()
+    fun messageQuestion(request: String): PromptAction.Message {
+        val messageID: String = UUID.randomUUID().toString()
+        val createdAt = Instant.now().toString()
+        return PromptAction.Message("user", request, messageID, createdAt)
+    }
+    fun messageAnswer(message: String): PromptAction.Message {
+        val messageID: String = UUID.randomUUID().toString()
+        val createdAt = Instant.now().toString()
+        return PromptAction.Message("assistant", message, messageID, createdAt)
+    }
     private fun sendEventStreamRequest(message: String): Response? {
         val url = URL("https://api-nxdev.ntq.ai/api/conversations/stream")
         val requestBody = RequestBody.create(
             MediaType.parse("application/json"), Gson().toJson(
                 PromptAction.JsonRequest(
-                    messages = listOf(PromptAction.Message("user", message)),
-                    max_tokens = 4096
+                    messages = listOf(PromptAction.Message("user", message, messageQuestion(message).id, messageQuestion(message).createAt)),
+                    max_tokens = 4096,
+                    conversationId = ConversationId
                 )
             ))
 
@@ -117,11 +125,14 @@ open class PromptAction : AnAction() {
             val model: String = "1",
             val messages: List<Message>,
             val max_tokens: Int,
-            val stream: Boolean = true
+            val stream: Boolean = true,
+            val conversationId : String
     )
 
     data class Message(
             val role: String,
-            val content: String
+            val content: String,
+            val id: String,
+            val createAt: String
     )
 }
