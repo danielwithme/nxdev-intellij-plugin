@@ -11,6 +11,7 @@ import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.content.ContentFactory
+import io.ktor.utils.io.errors.*
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -37,9 +38,8 @@ import javax.swing.*
 import java.awt.event.AdjustmentEvent
 
 import java.awt.event.AdjustmentListener
-
-
-
+import java.time.Instant
+import java.util.*
 
 
 class NxDevWindowFactory : ToolWindowFactory {
@@ -63,6 +63,7 @@ class NxDevWindowFactory : ToolWindowFactory {
         val ROLE_NXDEV_TEXT = "**NX_DEV**: "
         val ROLE_YOU_TEXT = "**YOU**: "
         var conversation = ""
+        var responseMessage = ""
 
         private val service = toolWindow.project.service<MyProjectService>()
         val processor = Markdown4jProcessor()
@@ -148,14 +149,79 @@ class NxDevWindowFactory : ToolWindowFactory {
                 panel.scrollBy(0, 100)
             }
         }
+        val ConversationId: String = UUID.randomUUID().toString()
+        fun messageQuestion(request: String): PromptAction.Message {
+            val messageID: String = UUID.randomUUID().toString()
+            val createdAt = Instant.now().toString()
+            return PromptAction.Message("user", request, messageID, createdAt)
+        }
+        fun messageAnswer(message: String): PromptAction.Message {
+            val messageID: String = UUID.randomUUID().toString()
+            val createdAt = Instant.now().toString()
+            return PromptAction.Message("assistant", message, messageID, createdAt)
+        }
+        fun addToConversation(request: String, response: String){
+            val userMessage = messageQuestion(request)
+            val assistantMessage = messageAnswer(response)
+            val url = URL("https://api-nxdev.ntq.ai/api/conversations")
+            val requestBody = RequestBody.create(
+                MediaType.parse("application/json"), Gson().toJson(
+                    PromptAction.JsonRequest(
+                        messages = listOf(userMessage, assistantMessage),
+                        max_tokens = 4096,
+                        conversationId = ConversationId
+                    )
+                )
+            )
+            val client = OkHttpClient.Builder()
+                .connectionSpecs(listOf(
+                    ConnectionSpec.Builder(ConnectionSpec.MODERN_TLS)
+                        .tlsVersions(TlsVersion.TLS_1_2)
+                        .cipherSuites(
+                            CipherSuite.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+                            CipherSuite.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+                            CipherSuite.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+                            CipherSuite.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA
+                        )
+                        .build(),
+                    ConnectionSpec.COMPATIBLE_TLS,
+                    ConnectionSpec.CLEARTEXT
+                ))
+                .build()
+
+            val httpRequest = Request.Builder()
+                .url(url)
+                .post(requestBody)
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Authorization", MyPluginSettings.getInstance().apiKey)
+                .addHeader("platform", "Intellij")
+                .build()
+
+            client.newCall(httpRequest).enqueue(object : Callback {
+                override fun onResponse(call: Call, response: Response) {
+                    if (response.isSuccessful) {
+                        val responseBody = response.body()?.string()
+                        println("Response: $responseBody")
+                    } else {
+                        println("Request failed with code: ${response.code()}")
+                        println("Response body: ${response.body()?.string()}")
+                    }
+                }
+                override fun onFailure(call: Call, e: IOException) {
+                    e.printStackTrace()
+                    println("Request failed: ${e.message}")
+                }
+            })
+        }
         fun callAI(request: String): Response? {
 //                    val response = sendEventStreamRequest(request)
             val url = URL("https://api-nxdev.ntq.ai/api/conversations/stream")
             val requestBody = RequestBody.create(
                 MediaType.parse("application/json"), Gson().toJson(
                     PromptAction.JsonRequest(
-                        messages = listOf(PromptAction.Message("user", request)),
-                        max_tokens = 4096
+                        messages = listOf(PromptAction.Message("user", request, messageQuestion(request).id, messageQuestion(request).createAt)),
+                        max_tokens = 4096,
+                        conversationId = ConversationId
                     )
                 ))
 
@@ -189,6 +255,7 @@ class NxDevWindowFactory : ToolWindowFactory {
                     try {
                         addQuestion(request)
                         addResponse(request)
+                        addToConversation(request,responseMessage)
 
                     }catch(e: Exception){
                         SwingUtilities.invokeLater {
@@ -206,6 +273,7 @@ class NxDevWindowFactory : ToolWindowFactory {
                             requestField.text = ""
                             button.isEnabled = false
                             requestField.isEnabled = true
+                            responseMessage = ""
                         }
                     }
                 }
@@ -226,6 +294,7 @@ class NxDevWindowFactory : ToolWindowFactory {
                         val data = Gson().fromJson(eventJSON, ChatCompletion::class.java);
                         SwingUtilities.invokeLater {
                             conversation += data?.choices?.getOrNull(0)?.delta?.content ?: ""
+                            responseMessage += data?.choices?.getOrNull(0)?.delta?.content ?: ""
                             displayConversation()
                         }
                     } catch (e: Exception) {
