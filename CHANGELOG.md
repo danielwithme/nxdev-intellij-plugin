@@ -4,9 +4,11 @@
 
 ## [Unreleased]
 ### Added
-- Change backend endpoint
-- Update view: question box, placeholder, multiline support
+- Save conversation
+- 
+## [0.0.9] - 2024-04-15
 
+- Save conversation
 ## [0.0.8] - 2024-04-04
 - Update conversation view
 - Improve UI UX: enter, shift-enter, auto clearing questions
