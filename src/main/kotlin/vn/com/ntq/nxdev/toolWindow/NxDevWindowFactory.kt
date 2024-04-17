@@ -64,6 +64,7 @@ class NxDevWindowFactory : ToolWindowFactory {
         val ROLE_YOU_TEXT = "**YOU**: "
         var conversation = ""
         var responseMessage = ""
+        var inProgress = false
 
         private val service = toolWindow.project.service<MyProjectService>()
         val processor = Markdown4jProcessor()
@@ -108,13 +109,17 @@ class NxDevWindowFactory : ToolWindowFactory {
                         requestField.caretPosition = caretPosition + 1
                     }else if(e?.keyCode == KeyEvent.VK_ENTER){
                         button.doClick()
-                        requestField.isEnabled = false
                         requestField.text = ""
                     }
                 }
             })
             buttonPanel.add(button.apply {
                 addActionListener(SendRequestActionListener())
+                addActionListener{
+                    requestField.isEnabled = false
+                    button.isEnabled = false
+                    inProgress = true
+                }
             })
             requestPanel.add(buttonPanel, BorderLayout.EAST)
 
@@ -271,9 +276,9 @@ class NxDevWindowFactory : ToolWindowFactory {
                     }finally {
                         SwingUtilities.invokeLater {
                             requestField.text = ""
-                            button.isEnabled = false
                             requestField.isEnabled = true
                             responseMessage = ""
+                            inProgress = false
                         }
                     }
                 }

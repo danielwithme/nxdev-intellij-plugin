@@ -58,16 +58,23 @@ open class PromptAction : AnAction() {
                     val contentManager = toolWindow?.contentManager
                     val content = contentManager?.getContent(0)?.component
                     if (content is NxDevWindowFactory.NxDevWindows) {
-                        toolWindow.show();
-                        content.requestField.text = getPrefix()
-                        GlobalScope.launch(Dispatchers.IO) {
-                            content.requestField.isEnabled = false
-                            content.requestField.text = ""
-                            content.addQuestion(question)
-                            content.addResponse(question)
-                            content.addToConversation(question, content.responseMessage)
-                            content.responseMessage = ""
-                            content.requestField.isEnabled = true
+                        var isProcessRunning = !content.requestField.isEnabled
+                        if (!content.inProgress && !isProcessRunning) {
+                            toolWindow.show();
+                            content.requestField.text = getPrefix()
+                            GlobalScope.launch(Dispatchers.IO) {
+                                SwingUtilities.invokeLater {
+                                    content.requestField.isEnabled = false
+                                    content.requestField.text = ""
+                                }
+                                content.addQuestion(question)
+                                content.addResponse(question)
+                                content.addToConversation(question, content.responseMessage)
+                                content.responseMessage = ""
+                                content.requestField.isEnabled = true
+                            }
+                        }else{
+                            Messages.showMessageDialog(project, "A process is running at the moment, please try again after it's done", "Error", Messages.getErrorIcon())
                         }
                     }
                 }
